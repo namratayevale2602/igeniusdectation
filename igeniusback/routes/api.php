@@ -35,7 +35,7 @@ Route::middleware([\App\Http\Middleware\SanctumCookieAuth::class])->group(functi
     });
 
     // Admin routes
-    Route::middleware('admin')->prefix('admin')->group(function () {
+    Route::prefix('admin')->middleware([\App\Http\Middleware\AdminMiddleware::class])->group(function () {
         Route::get('/stats', [AdminController::class, 'getStats']);
         Route::post('/create-admin', [AuthController::class, 'createAdminUser']);
         Route::post('/users', [AdminController::class, 'createUser']);
