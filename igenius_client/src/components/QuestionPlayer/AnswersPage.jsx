@@ -60,6 +60,13 @@ export const AnswersPage = () => {
                 Back to Player
               </button>
               <button
+                onClick={() => navigate(-3)}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                Back to Week
+              </button>
+              <button
                 onClick={() => navigate("/")}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors"
               >
@@ -159,26 +166,25 @@ export const AnswersPage = () => {
                         >
                           <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                                <span className="font-bold text-blue-600">
-                                  {qIndex + 1}
-                                </span>
-                              </div>
                               <div>
                                 <div className="font-semibold text-gray-800">
                                   Question {question.question_number}
                                 </div>
                               </div>
                             </div>
-                            <div className="text-2xl font-bold text-green-600 font-mono bg-green-50 px-3 py-1 rounded-lg">
+                            {/* <div className="text-2xl font-bold text-green-600 font-mono bg-green-50 px-3 py-1 rounded-lg">
                               {question.answer}
-                            </div>
+                            </div> */}
                           </div>
 
                           <div className="mb-4">
-                            <div className="text-lg font-mono bg-gray-50 p-3 rounded-lg text-center border border-gray-200">
-                              {question.formatted_question} {" = "}
-                              {question.answer}
+                            <div className="text-2xl text-green-600 font-mono bg-green-50 p-3 rounded-lg text-center">
+                              <span className="text-green-600">
+                                {question.formatted_question} {" = "}
+                              </span>
+                              <span className="font-bold text-3xl">
+                                {question.answer}
+                              </span>
                             </div>
                           </div>
                         </div>

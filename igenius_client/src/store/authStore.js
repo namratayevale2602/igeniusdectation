@@ -4,7 +4,7 @@ import axios from "axios";
 
 // Create main API instance - Use localhost instead of 127.0.0.1
 const api = axios.create({
-  baseURL: "http://localhost:8000/api",
+  baseURL: "https://igeniusdictation.demovoting.com/api",
   withCredentials: true, // ← ADD THIS
   headers: {
     "Content-Type": "application/json",
@@ -63,7 +63,7 @@ const useAuthStore = create(
           console.log("🛡️ Getting CSRF token...");
           // Note: This goes to /sanctum/csrf-cookie (not /api/sanctum/csrf-cookie)
           const response = await axios.get(
-            "http://localhost:8000/sanctum/csrf-cookie",
+            "https://igeniusdictation.demovoting.com/sanctum/csrf-cookie",
             {
               withCredentials: true,
             },

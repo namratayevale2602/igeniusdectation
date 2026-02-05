@@ -62,3 +62,5 @@ filament panel login
 
 admin@gmail.com
 admin@123
+
+php artisan serve --host=localhost --port=8000

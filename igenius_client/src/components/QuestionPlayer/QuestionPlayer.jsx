@@ -102,24 +102,8 @@ export const QuestionPlayer = () => {
     // Get available voices
     const voices = speechSynthesis.getVoices();
 
-    // Strategy: Prefer English-speaking voices, filter out Hindi-only voices
-    const availableVoices = voices.filter((voice) => {
-      // Exclude voices that are explicitly Hindi-only
-      if (voice.lang.startsWith("hi-")) {
-        return false;
-      }
-
-      // Exclude voices with Hindi names if they don't support English
-      const voiceName = voice.name.toLowerCase();
-      if (voiceName.includes("hindi") && !voice.lang.startsWith("en")) {
-        return false;
-      }
-
-      return true;
-    });
-
-    // Priority 1: English female voices with possible Indian accent
-    let selectedVoice = availableVoices.find((voice) => {
+    // Filter for English female voices only
+    const englishFemaleVoices = voices.filter((voice) => {
       const voiceName = voice.name.toLowerCase();
       const isEnglish = voice.lang.startsWith("en");
       const isFemale =
@@ -127,44 +111,35 @@ export const QuestionPlayer = () => {
         voiceName.includes("samantha") ||
         voiceName.includes("zira") ||
         voiceName.includes("hazel") ||
-        voiceName.includes("veena") || // Indian but speaks English
-        voiceName.includes("rishi"); // Indian but speaks English
+        voiceName.includes("karen") ||
+        voiceName.includes("tessa");
 
-      return isEnglish && isFemale;
+      // Exclude male voices explicitly
+      const isMale =
+        voiceName.includes("male") && !voiceName.includes("female");
+
+      return isEnglish && isFemale && !isMale;
     });
 
-    // Priority 2: Any English female voice
-    if (!selectedVoice) {
-      selectedVoice = availableVoices.find((voice) => {
-        const voiceName = voice.name.toLowerCase();
-        const isEnglish = voice.lang.startsWith("en");
-        return (
-          isEnglish &&
-          (voiceName.includes("female") || !voiceName.includes("male"))
-        );
-      });
-    }
+    // If no English female voices found, try to find any English voice that sounds female
+    let selectedVoice = null;
 
-    // Priority 3: Any English voice
-    if (!selectedVoice) {
-      selectedVoice = availableVoices.find((voice) =>
-        voice.lang.startsWith("en"),
-      );
-    }
-
-    // Priority 4: First available non-Hindi voice
-    if (!selectedVoice && availableVoices.length > 0) {
-      selectedVoice = availableVoices[0];
-    }
-
-    // Priority 5: Ultimate fallback
-    if (!selectedVoice && voices.length > 0) {
-      selectedVoice = voices[0];
+    if (englishFemaleVoices.length > 0) {
+      // Prioritize US English Female
+      selectedVoice =
+        englishFemaleVoices.find(
+          (v) => v.name.includes("US English") && v.name.includes("Female"),
+        ) || englishFemaleVoices[0];
+    } else {
+      // Fallback: find any English voice that might sound female
+      const englishVoices = voices.filter((v) => v.lang.startsWith("en"));
+      selectedVoice =
+        englishVoices.find((v) => !v.name.toLowerCase().includes("male")) ||
+        (englishVoices.length > 0 ? englishVoices[0] : null);
     }
 
     if (selectedVoice) {
       speech.voice = selectedVoice;
-      // Double enforce English language
       speech.lang = "en-US";
       speech.text = processedText;
     }
@@ -175,20 +150,18 @@ export const QuestionPlayer = () => {
 
   // Add this helper function to preprocess text
   const preprocessForEnglish = (text) => {
-    // If it's a number, ensure it's spoken in English
-    if (/^\d+$/.test(text.trim())) {
-      const num = parseInt(text.trim());
-      if (isNaN(num)) return text;
+    const str = text.toString().trim();
 
-      // For multi-digit numbers, insert spaces between digits
-      if (num > 9) {
-        return text.trim().split("").join(" ");
-      }
+    // Check if it's a number
+    if (/^\d+$/.test(str)) {
+      const num = parseInt(str);
+      if (isNaN(num)) return str;
 
-      return text.trim();
+      // Use proper English number words
+      return speakNumber(num);
     }
 
-    return text;
+    return str;
   };
 
   // Function to speak numbers in proper English
@@ -196,12 +169,85 @@ export const QuestionPlayer = () => {
     const num = parseInt(number);
     if (isNaN(num)) return number.toString();
 
-    // For multi-digit numbers, speak each digit separately
-    if (num > 9) {
-      return num.toString().split("").join(" ");
+    // For numbers 0-19, speak normally
+    if (num >= 0 && num <= 19) {
+      const words = [
+        "zero",
+        "one",
+        "two",
+        "three",
+        "four",
+        "five",
+        "six",
+        "seven",
+        "eight",
+        "nine",
+        "ten",
+        "eleven",
+        "twelve",
+        "thirteen",
+        "fourteen",
+        "fifteen",
+        "sixteen",
+        "seventeen",
+        "eighteen",
+        "nineteen",
+      ];
+      return words[num];
     }
 
-    return num.toString();
+    // For numbers 20-99
+    if (num >= 20 && num <= 99) {
+      const tens = [
+        "",
+        "",
+        "twenty",
+        "thirty",
+        "forty",
+        "fifty",
+        "sixty",
+        "seventy",
+        "eighty",
+        "ninety",
+      ];
+      const ones = num % 10;
+      const tensDigit = Math.floor(num / 10);
+
+      if (ones === 0) {
+        return tens[tensDigit];
+      } else {
+        return `${tens[tensDigit]} ${speakNumber(ones)}`;
+      }
+    }
+
+    // For numbers 100-999
+    if (num >= 100 && num <= 999) {
+      const hundreds = Math.floor(num / 100);
+      const remainder = num % 100;
+
+      if (remainder === 0) {
+        return `${speakNumber(hundreds)} hundred`;
+      } else {
+        return `${speakNumber(hundreds)} hundred and ${speakNumber(remainder)}`;
+      }
+    }
+
+    // For numbers 1000-9999
+    if (num >= 1000 && num <= 9999) {
+      const thousands = Math.floor(num / 1000);
+      const remainder = num % 1000;
+
+      if (remainder === 0) {
+        return `${speakNumber(thousands)} thousand`;
+      } else if (remainder < 100) {
+        return `${speakNumber(thousands)} thousand and ${speakNumber(remainder)}`;
+      } else {
+        return `${speakNumber(thousands)} thousand ${speakNumber(remainder)}`;
+      }
+    }
+
+    // For larger numbers, fall back to digit-by-digit
+    return number.toString().split("").join(" ");
   };
 
   const speakItem = (item) => {
@@ -210,14 +256,8 @@ export const QuestionPlayer = () => {
 
       let text = "";
       if (item.type === "digit") {
-        // Force English number pronunciation
-        const num = parseInt(item.value);
-        if (num > 9) {
-          // For multi-digit numbers, speak each digit separately in English
-          text = item.value.toString().split("").join(" ");
-        } else {
-          text = item.value.toString();
-        }
+        // Use proper English number pronunciation
+        text = speakNumber(item.value);
       } else if (item.type === "operator") {
         text = getOperatorWord(item.value);
       }
@@ -229,26 +269,40 @@ export const QuestionPlayer = () => {
         speech.rate = playbackSpeed;
         speech.volume = 1;
 
-        // Get voices and select English-speaking one
+        // Get voices and select English-speaking female voice only
         const voices = speechSynthesis.getVoices();
-        const englishVoices = voices.filter((v) => v.lang.startsWith("en"));
 
-        if (englishVoices.length > 0) {
-          // Try to find a female English voice
-          const femaleEnglishVoice = englishVoices.find(
-            (v) =>
-              v.name.toLowerCase().includes("female") ||
-              v.name.includes("Samantha") ||
-              v.name.includes("Zira"),
+        // Filter for English female voices
+        const englishFemaleVoices = voices.filter((voice) => {
+          const voiceName = voice.name.toLowerCase();
+          const isEnglish = voice.lang.startsWith("en");
+          const isFemale =
+            voiceName.includes("female") ||
+            voiceName.includes("samantha") ||
+            voiceName.includes("zira") ||
+            voiceName.includes("hazel") ||
+            voiceName.includes("karen") ||
+            voiceName.includes("tessa") ||
+            voiceName.includes("veena") ||
+            voiceName.includes("rishi");
+
+          return isEnglish && isFemale;
+        });
+
+        if (englishFemaleVoices.length > 0) {
+          // Prioritize US English female voices
+          const usFemaleVoice = englishFemaleVoices.find(
+            (v) => v.name.includes("US English") && v.name.includes("Female"),
           );
 
-          speech.voice = femaleEnglishVoice || englishVoices[0];
+          speech.voice = usFemaleVoice || englishFemaleVoices[0];
         }
 
         speechSynthesis.speak(speech);
       }, 10);
     }
   };
+
   const getEnglishSpeakingVoice = () => {
     const voices = speechSynthesis.getVoices();
 
@@ -256,13 +310,12 @@ export const QuestionPlayer = () => {
     const englishFemaleVoices = [
       "Google UK English Female",
       "Google US English Female",
-      "Microsoft Zira Desktop",
-      "Microsoft Hazel Desktop",
-      "Samantha",
-      "Karen",
-      "Tessa",
-      "Veena", // Speaks English with Indian accent
-      "Rishi", // Speaks English with Indian accent
+      "Microsoft Zira Desktop", // English (United States) female
+      "Microsoft Hazel Desktop", // English (Great Britain) female
+      "Samantha", // macOS US English female
+      "Karen", // macOS Australian English female
+      "Tessa", // macOS South African English female
+      "Veena", // Indian English female (if available)
     ];
 
     // First, try to find a known English female voice
@@ -278,10 +331,15 @@ export const QuestionPlayer = () => {
     const femaleVoice = englishVoices.find(
       (v) =>
         v.name.toLowerCase().includes("female") ||
-        !v.name.toLowerCase().includes("male"),
+        (!v.name.toLowerCase().includes("male") &&
+          !v.name.toLowerCase().includes("david") &&
+          !v.name.toLowerCase().includes("mark") &&
+          !v.name.toLowerCase().includes("paul")),
     );
 
     if (femaleVoice) return femaleVoice;
+
+    // Ultimate fallback
     if (englishVoices.length > 0) return englishVoices[0];
     if (voices.length > 0) return voices[0];
 
@@ -289,6 +347,7 @@ export const QuestionPlayer = () => {
   };
 
   // Update the voice initialization to be more aggressive
+  // Update the voice initialization in useEffect
   useEffect(() => {
     const initializeVoices = () => {
       const voices = speechSynthesis.getVoices();
@@ -298,33 +357,39 @@ export const QuestionPlayer = () => {
           voices.map((v) => `${v.name} (${v.lang})`),
         );
 
-        // Find and log English-speaking voices
-        const englishVoices = voices.filter((v) => v.lang.startsWith("en"));
+        // Find and log English-speaking female voices only
+        const englishFemaleVoices = voices.filter((voice) => {
+          const voiceName = voice.name.toLowerCase();
+          const isEnglish = voice.lang.startsWith("en");
+          const isFemale =
+            voiceName.includes("female") ||
+            voiceName.includes("samantha") ||
+            voiceName.includes("zira") ||
+            voiceName.includes("hazel") ||
+            voiceName.includes("karen") ||
+            voiceName.includes("tessa");
+          const isMale =
+            voiceName.includes("male") && !voiceName.includes("female");
+
+          return isEnglish && isFemale && !isMale;
+        });
+
         console.log(
-          "English voices:",
-          englishVoices.map((v) => `${v.name} (${v.lang})`),
+          "English female voices:",
+          englishFemaleVoices.map((v) => `${v.name} (${v.lang})`),
         );
 
-        // Find female English voices
-        const femaleEnglishVoices = englishVoices.filter(
-          (v) =>
-            v.name.toLowerCase().includes("female") ||
-            v.name.includes("Samantha") ||
-            v.name.includes("Zira") ||
-            v.name.includes("Hazel"),
-        );
-        console.log(
-          "Female English voices:",
-          femaleEnglishVoices.map((v) => v.name),
-        );
-
-        // Test if we can get an English voice
+        // Test if we can get an English female voice
         const testVoice = getEnglishSpeakingVoice();
         if (testVoice) {
           console.log(
-            "Selected voice for English:",
+            "Selected voice:",
             testVoice.name,
             testVoice.lang,
+            "Gender:",
+            testVoice.name.toLowerCase().includes("female")
+              ? "Female"
+              : "Unknown",
           );
         }
       }

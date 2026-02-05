@@ -17,9 +17,12 @@ const Login = () => {
     const initializeCSRF = async () => {
       try {
         console.log("Initializing CSRF...");
-        await axios.get("http://localhost:8000/sanctum/csrf-cookie", {
-          withCredentials: true,
-        });
+        await axios.get(
+          "https://igeniusdictation.demovoting.com/sanctum/csrf-cookie",
+          {
+            withCredentials: true,
+          },
+        );
         console.log("CSRF initialized");
       } catch (error) {
         console.error("CSRF init error:", error);
@@ -129,13 +132,6 @@ const Login = () => {
             )}
           </button>
         </form>
-
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <p className="text-sm text-blue-700">
-            <strong>Debug Info:</strong> Make sure Laravel is running on{" "}
-            <code>http://localhost:8000</code>
-          </p>
-        </div>
       </motion.div>
     </div>
   );
